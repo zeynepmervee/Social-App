@@ -1,0 +1,63 @@
+body {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card {
+    border: none;
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4568dc, #b06ab3);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #3f5fc8, #9c5ea0);
+}
+
+.form-control:focus {
+    border-color: #b06ab3;
+    box-shadow: 0 0 0 0.2rem rgba(176, 106, 179, 0.25);
+}
+
+.posts .card {
+    border-radius: 10px;
+}
+
+.posts .card-body {
+    padding: 1.5rem;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+.btn-outline-primary {
+    color: #4568dc;
+    border-color: #4568dc;
+}
+
+.btn-outline-primary:hover {
+    background-color: #4568dc;
+    border-color: #4568dc;
+}
+
+.btn-outline-danger {
+    color: #dc4545;
+    border-color: #dc4545;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc4545;
+    border-color: #dc4545;
+} 
