@@ -1,6 +1,7 @@
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Post
+from flask_wtf.csrf import CSRFProtect
+from models import db, User, Post, Like, Comment
 from forms import LoginForm, RegistrationForm, UpdateProfileForm, PostForm
 import os
 
@@ -10,9 +11,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///social.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+csrf = CSRFProtect(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -121,6 +124,62 @@ def delete_post(post_id):
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+@app.route('/post/<int:post_id>/like', methods=['POST'])
+@login_required
+def like_post(post_id):
+    try:
+        post = Post.query.get_or_404(post_id)
+        like = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first()
+        
+        if like:
+            db.session.delete(like)
+            db.session.commit()
+            return jsonify({'status': 'unliked', 'likes_count': post.likes_count})
+        else:
+            like = Like(user_id=current_user.id, post_id=post_id)
+            db.session.add(like)
+            db.session.commit()
+            return jsonify({'status': 'liked', 'likes_count': post.likes_count})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/post/<int:post_id>/comment', methods=['POST'])
+@login_required
+def add_comment(post_id):
+    try:
+        post = Post.query.get_or_404(post_id)
+        content = request.form.get('content')
+        
+        if not content or not content.strip():
+            flash('Comment cannot be empty!', 'danger')
+            return redirect(url_for('home'))
+        
+        comment = Comment(content=content.strip(), author=current_user, post=post)
+        db.session.add(comment)
+        db.session.commit()
+        flash('Comment added successfully!', 'success')
+        return redirect(url_for('home'))
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while adding your comment.', 'danger')
+        return redirect(url_for('home'))
+
+@app.route('/post/<int:post_id>/comments')
+@login_required
+def get_comments(post_id):
+    post = Post.query.get_or_404(post_id)
+    return render_template('_comments.html', post=post)
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return render_template('500.html'), 500
 
 if __name__ == '__main__':
     with app.app_context():

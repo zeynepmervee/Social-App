@@ -13,6 +13,11 @@
                     {{ post_form.hidden_tag() }}
                     <div class="mb-3">
                         {{ post_form.content(class="form-control", rows="3", placeholder="What's on your mind?") }}
+                        {% if post_form.content.errors %}
+                            {% for error in post_form.content.errors %}
+                                <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
                     </div>
                     {{ post_form.submit(class="btn btn-primary") }}
                 </form>
@@ -48,6 +53,37 @@
                         {% endif %}
                     </div>
                     <p class="card-text">{{ post.content }}</p>
+                    
+                    <!-- Likes and Comments Section -->
+                    <div class="border-top pt-3 mt-3">
+                        <div class="d-flex align-items-center mb-3">
+                            <button class="btn btn-sm btn-outline-primary like-btn me-2" 
+                                    data-post-id="{{ post.id }}"
+                                    data-liked="{{ 'true' if current_user.has_liked_post(post) else 'false' }}">
+                                <i class="bi bi-heart{% if current_user.has_liked_post(post) %}-fill{% endif %}"></i>
+                                <span class="likes-count">{{ post.likes_count }}</span> Likes
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary comment-toggle" 
+                                    data-post-id="{{ post.id }}">
+                                <i class="bi bi-chat"></i>
+                                {{ post.comments|length }} Comments
+                            </button>
+                        </div>
+                        
+                        <!-- Comments Section -->
+                        <div class="comments-section" id="comments-{{ post.id }}" style="display: none;">
+                            <div class="comments-list border-top pt-3">
+                                {% include '_comments.html' %}
+                            </div>
+                            <form class="comment-form mt-3" action="{{ url_for('add_comment', post_id=post.id) }}" method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="input-group">
+                                    <input type="text" name="content" class="form-control" placeholder="Write a comment..." required>
+                                    <button type="submit" class="btn btn-primary">Send</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
             {% else %}
@@ -58,4 +94,52 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Like functionality
+    document.querySelectorAll('.like-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            fetch(`/post/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                const icon = this.querySelector('i');
+                if (data.status === 'liked') {
+                    icon.classList.remove('bi-heart');
+                    icon.classList.add('bi-heart-fill');
+                    this.dataset.liked = 'true';
+                } else {
+                    icon.classList.remove('bi-heart-fill');
+                    icon.classList.add('bi-heart');
+                    this.dataset.liked = 'false';
+                }
+                this.querySelector('.likes-count').textContent = data.likes_count;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing your request.');
+            });
+        });
+    });
+
+    // Toggle comments
+    document.querySelectorAll('.comment-toggle').forEach(button => {
+        button.addEventListener('click', function() {
+            const postId = this.dataset.postId;
+            const commentsSection = document.querySelector(`#comments-${postId}`);
+            commentsSection.style.display = commentsSection.style.display === 'none' ? 'block' : 'none';
+        });
+    });
+});
+</script>
 {% endblock %} 
